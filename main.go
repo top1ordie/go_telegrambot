@@ -6,8 +6,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/gotd/td/telegram"
+	"github.com/celestix/gotgproto"
+	"github.com/celestix/gotgproto/sessionMaker"
+	"github.com/gotd/td/tg"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/sqlite"
 )
 
 func main() {
@@ -21,13 +24,48 @@ func main() {
 		panic(err)
 	}
 	apiHash := os.Getenv("API_HASH")
-	
-	client := telegram.NewClient(int(apiId), apiHash, telegram.Options{
-	})
+	phoneNumber := os.Getenv("PHONE_NUMBER")
+	client, err := gotgproto.NewClient(
+		// Get AppID from https://my.telegram.org/apps
+		apiId,
+		// Get ApiHash from https://my.telegram.org/apps
+		apiHash,
+		// ClientType, as we defined above
+		gotgproto.ClientTypePhone(phoneNumber),
+		// Optional parameters of client
+		&gotgproto.ClientOpts{
+			Session: sessionMaker.SqlSession(sqlite.Open("echobot")),
+		},
+	)
+
 
 	client.Run(context.Background(), func(ctx context.Context) error {
-    		api := client.API()
-        println(api)
-		return nil
+		contacts := []tg.InputPhoneContact{
+			{
+				ClientID:  1,
+				FirstName: "",
+				LastName:  "",
+				Phone:     "77085690946",
+			},
+		}
+
+		imported, err := client.API().ContactsImportContacts(
+			ctx,
+			contacts,
+		)
+		if err != nil {
+			return err
+		}
+
+		if len(imported.Users) > 0 {
+			user := imported.Users[0].(*tg.User)
+			log.Printf("Chat ID (User ID) for phone %s: %d", "+1234567890", user.ID)
+		}
+
+    return nil
 	})
+	if err != nil {
+		log.Fatalln("failed to start client:", err)
+	}
+	client.Idle()
 }

@@ -2,6 +2,8 @@ module github/top1ordie/go_telegrambot
 
 go 1.23.5
 
+require gorm.io/driver/sqlite v1.5.7
+
 require (
 	github.com/AnimeKaizoku/cacher v1.0.2 // indirect
 	github.com/celestix/gotgproto v1.0.0-beta20 // indirect
@@ -27,6 +29,7 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/ogen-go/ogen v1.8.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
