@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
-	"path/filepath"
 	"strconv"
-  "context"
+
 	"github.com/gotd/td/telegram"
 	"github.com/joho/godotenv"
 )
@@ -16,17 +16,18 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	apiId, err := strconv.Atoi(os.Getenv("APP_ID"))
+	apiId, err := strconv.Atoi(os.Getenv("API_ID"))
 	if err != nil {
 		panic(err)
 	}
 	apiHash := os.Getenv("API_HASH")
-	sessionStorage := &telegram.FileSessionStorage{
-		Path: filepath.Join(sessionDir, "session.json"),
-	}
+	
 	client := telegram.NewClient(int(apiId), apiHash, telegram.Options{
-		SessionStorage: sessionStorage,
 	})
 
-  client.Run(ctx context.Context,func {})
+	client.Run(context.Background(), func(ctx context.Context) error {
+    		api := client.API()
+        println(api)
+		return nil
+	})
 }
