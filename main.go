@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 
@@ -13,6 +16,11 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/sqlite"
 )
+
+type Message struct {
+	PhoneNumber string `json:"phoneNumber"`
+	MessageText string `json:"message"`
+}
 
 func main() {
 	err := godotenv.Load()
@@ -26,29 +34,60 @@ func main() {
 	}
 	apiHash := os.Getenv("API_HASH")
 	phoneNumber := os.Getenv("PHONE_NUMBER")
+
 	client, err := gotgproto.NewClient(
-		// Get AppID from https://my.telegram.org/apps
 		apiId,
-		// Get ApiHash from https://my.telegram.org/apps
 		apiHash,
-		// ClientType, as we defined above
 		gotgproto.ClientTypePhone(phoneNumber),
-		// Optional parameters of client
 		&gotgproto.ClientOpts{
 			Session: sessionMaker.SqlSession(sqlite.Open("echobot")),
 		},
 	)
+  
 	go func() {
-		client.Run(context.Background(), func(ctx context.Context) error {
+		err = client.Run(context.Background(), func(ctx context.Context) error {
+      // Клиент работает, можно выполнять действия
+			log.Println("Telegram client is running")
 			return nil
 		})
 		if err != nil {
 			log.Fatalln("failed to start client:", err)
 		}
 	}()
-	go send_message("77085690946", client, "sosal")
-	go send_message("77085690946", client, "sosal2")
-	client.Idle()
+  go http_sever(client)
+	err = client.Idle()
+	if err != nil {
+		log.Fatalln("failed client idle:", err)
+	}
+	//	go send_message("77085690946", client, "sosal")
+	//	go send_message("77085690946", client, "sosal2")
+}
+
+func http_sever(client *gotgproto.Client) {
+	http.HandleFunc("/sosal", send_handler(client))
+	http.ListenAndServe(":8080", nil)
+
+}
+
+func send_handler(client *gotgproto.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			fmt.Print("goida")
+			decoder := json.NewDecoder(r.Body)
+			var msg Message
+			err := decoder.Decode(&msg)
+			log.Println(r.Body)
+			if err != nil {
+				http.Error(w, "Reject", http.StatusBadRequest)
+			}
+			go send_message(msg.PhoneNumber, client, msg.MessageText)
+			log.Println(msg.MessageText)
+			log.Println(msg.PhoneNumber)
+		default:
+			http.Error(w, "Reject", http.StatusBadRequest)
+		}
+	}
 }
 
 func send_message(phone string, client *gotgproto.Client, msg string) {
@@ -79,5 +118,8 @@ func send_message(phone string, client *gotgproto.Client, msg string) {
 			AccessHash: user.AccessHash,
 		}
 		_, err = sender.To(peer).Text(ctx, msg)
+		if err != nil {
+			log.Fatalln("Error sending message:", err)
+		}
 	}
 }
