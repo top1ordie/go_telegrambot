@@ -43,33 +43,36 @@ func main() {
 			Session: sessionMaker.SqlSession(sqlite.Open("echobot")),
 		},
 	)
-  
+  ch := make(chan Message)
 	go func() {
 		err = client.Run(context.Background(), func(ctx context.Context) error {
       // Клиент работает, можно выполнять действия
 			log.Println("Telegram client is running")
+      for msg := range ch {
+        send_message(msg.PhoneNumber,client,msg.MessageText)
+      }
 			return nil
 		})
 		if err != nil {
 			log.Fatalln("failed to start client:", err)
 		}
 	}()
-  go http_sever(client)
+
+  go http_sever(client,ch)
+  
 	err = client.Idle()
 	if err != nil {
 		log.Fatalln("failed client idle:", err)
 	}
-	//	go send_message("77085690946", client, "sosal")
-	//	go send_message("77085690946", client, "sosal2")
 }
 
-func http_sever(client *gotgproto.Client) {
-	http.HandleFunc("/sosal", send_handler(client))
+func http_sever(client *gotgproto.Client,ch chan Message) {
+	http.HandleFunc("/sosal", send_handler(client,ch))
 	http.ListenAndServe(":8080", nil)
 
 }
 
-func send_handler(client *gotgproto.Client) http.HandlerFunc {
+func send_handler(client *gotgproto.Client,ch chan Message) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodPost:
@@ -81,7 +84,7 @@ func send_handler(client *gotgproto.Client) http.HandlerFunc {
 			if err != nil {
 				http.Error(w, "Reject", http.StatusBadRequest)
 			}
-			go send_message(msg.PhoneNumber, client, msg.MessageText)
+      ch <- msg
 			log.Println(msg.MessageText)
 			log.Println(msg.PhoneNumber)
 		default:
