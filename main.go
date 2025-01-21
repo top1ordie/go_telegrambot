@@ -38,44 +38,46 @@ func main() {
 			Session: sessionMaker.SqlSession(sqlite.Open("echobot")),
 		},
 	)
-
-
-	client.Run(context.Background(), func(ctx context.Context) error {
-		contacts := []tg.InputPhoneContact{
-			{
-				ClientID:  1,
-				FirstName: "",
-				LastName:  "",
-				Phone:     "77085690946",
-			},
-		}
-
-		imported, err := client.API().ContactsImportContacts(
-			ctx,
-			contacts,
-		)
+	go func() {
+		client.Run(context.Background(), func(ctx context.Context) error {
+			return nil
+		})
 		if err != nil {
-			return err
+			log.Fatalln("failed to start client:", err)
 		}
-
-		if len(imported.Users) > 0 {
-			user := imported.Users[0].(*tg.User)
-			log.Printf("Chat ID (User ID) for phone %s: %d", "+1234567890", user.ID)
-      sender := message.NewSender(client.API())
-			peer := &tg.InputPeerUser{
-				UserID:     user.ID,
-				AccessHash: user.AccessHash,
-			}
-			_, err = sender.To(peer).Text(ctx, "Hello World")
-		}
-
-
-    
-
-    return nil
-	})
-	if err != nil {
-		log.Fatalln("failed to start client:", err)
-	}
+	}()
+	go send_message("77085690946", client, "sosal")
+	go send_message("77085690946", client, "sosal2")
 	client.Idle()
+}
+
+func send_message(phone string, client *gotgproto.Client, msg string) {
+	ctx := context.Background()
+	contacts := []tg.InputPhoneContact{
+		{
+			ClientID:  1,
+			FirstName: "",
+			LastName:  "",
+			Phone:     phone,
+		},
+	}
+
+	imported, err := client.API().ContactsImportContacts(
+		ctx,
+		contacts,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	if len(imported.Users) > 0 {
+		user := imported.Users[0].(*tg.User)
+		log.Printf("Chat ID (User ID) for phone %s: %d", phone, user.ID)
+		sender := message.NewSender(client.API())
+		peer := &tg.InputPeerUser{
+			UserID:     user.ID,
+			AccessHash: user.AccessHash,
+		}
+		_, err = sender.To(peer).Text(ctx, msg)
+	}
 }
