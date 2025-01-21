@@ -8,6 +8,7 @@ import (
 
 	"github.com/celestix/gotgproto"
 	"github.com/celestix/gotgproto/sessionMaker"
+	"github.com/gotd/td/telegram/message"
 	"github.com/gotd/td/tg"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/sqlite"
@@ -60,7 +61,16 @@ func main() {
 		if len(imported.Users) > 0 {
 			user := imported.Users[0].(*tg.User)
 			log.Printf("Chat ID (User ID) for phone %s: %d", "+1234567890", user.ID)
+      sender := message.NewSender(client.API())
+			peer := &tg.InputPeerUser{
+				UserID:     user.ID,
+				AccessHash: user.AccessHash,
+			}
+			_, err = sender.To(peer).Text(ctx, "Hello World")
 		}
+
+
+    
 
     return nil
 	})
